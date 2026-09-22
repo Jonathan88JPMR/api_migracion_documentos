@@ -1,0 +1,180 @@
+[
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "Archivos",
+    "RelativePath": "api/migracion-documentos/archivos",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "System.Text.Json.JsonElement",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "CambiarEntorno",
+    "RelativePath": "api/migracion-documentos/cambiar-entorno",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "System.Text.Json.JsonElement",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "ConfigGet",
+    "RelativePath": "api/migracion-documentos/config-get",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "ConfigUpdate",
+    "RelativePath": "api/migracion-documentos/config-update",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "System.Text.Json.JsonElement",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "Entornos",
+    "RelativePath": "api/migracion-documentos/entornos",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "Log",
+    "RelativePath": "api/migracion-documentos/log",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "System.Text.Json.JsonElement",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "PreviewAp",
+    "RelativePath": "api/migracion-documentos/preview/ap/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "PreviewMs",
+    "RelativePath": "api/migracion-documentos/preview/ms/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "Run",
+    "RelativePath": "api/migracion-documentos/run",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "RunAll",
+    "RelativePath": "api/migracion-documentos/run-all",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "RunOrden",
+    "RelativePath": "api/migracion-documentos/run-orden",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "System.Text.Json.JsonElement",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "RunStatus",
+    "RelativePath": "api/migracion-documentos/run-status",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "System.Text.Json.JsonElement",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "Stats",
+    "RelativePath": "api/migracion-documentos/stats",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  }
+]
