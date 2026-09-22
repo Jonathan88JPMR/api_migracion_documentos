@@ -14,6 +14,7 @@ namespace api_migracion_documentos.Domain.UseCase
         Task<ApiResult> ConfigUpdateAsync(JsonElement updates);
         Task<ApiResult> StatsAsync();
         Task<ApiResult> ArchivosAsync(JsonElement filtros);
+        Task<(byte[]? datos, string nombre, string? error)> ArchivosExcelAsync(JsonElement filtros);
         Task<(byte[] datos, string nombre, string mime)?> PreviewApAsync(int id);
         Task<(byte[] datos, string nombre, string mime)?> PreviewMsAsync(string id);
         Task<ApiResult> LogAsync(int tail);

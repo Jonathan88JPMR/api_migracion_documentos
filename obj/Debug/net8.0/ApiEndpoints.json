@@ -17,6 +17,22 @@
   },
   {
     "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "ArchivosExcel",
+    "RelativePath": "api/migracion-documentos/archivos/excel",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "System.Text.Json.JsonElement",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
     "Method": "CambiarEntorno",
     "RelativePath": "api/migracion-documentos/cambiar-entorno",
     "HttpMethod": "POST",

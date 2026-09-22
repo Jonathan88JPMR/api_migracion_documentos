@@ -54,6 +54,16 @@ namespace api_migracion_documentos.Infraestructure.Controller
         public async Task<IActionResult> Archivos([FromBody] JsonElement body)
             => Responder(await _useCase.ArchivosAsync(body));
 
+        [HttpPost("archivos/excel")]
+        public async Task<IActionResult> ArchivosExcel([FromBody] JsonElement body)
+        {
+            var (datos, nombre, error) = await _useCase.ArchivosExcelAsync(body);
+            if (datos == null)
+                return StatusCode(500, new { ok = false, error = error ?? "No se pudo generar el Excel" });
+            return File(datos,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", nombre);
+        }
+
         [HttpGet("preview/ap/{id:int}")]
         public async Task<IActionResult> PreviewAp(int id)
         {

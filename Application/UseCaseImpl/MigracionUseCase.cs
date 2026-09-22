@@ -5,6 +5,7 @@ using api_migracion_documentos.Domain.Repository;
 using api_migracion_documentos.Domain.UseCase;
 using api_migracion_documentos.Infraestructure.Persistence;
 using api_migracion_documentos.Infraestructure.Services;
+using ClosedXML.Excel;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.FileProviders;
 
@@ -398,6 +399,118 @@ namespace api_migracion_documentos.Application.UseCaseImpl
             foreach (var r in rows.OfType<JsonObject>())
                 r["Empresa"] = EmpresaDeRuta(r["RutaDestino"]?.GetValue<string>(), seg)
                                ?? r["Empresa"]?.GetValue<string>() ?? "";
+        }
+
+        /// <summary>Excel (.xlsx) con los archivos en estado COMPLETADO del tipo dado.</summary>
+        public async Task<(byte[]? datos, string nombre, string? error)> ArchivosExcelAsync(JsonElement filtros)
+        {
+            var cfg = await GetActivoCfgAsync();
+            var tipo = (Str(filtros, "tipo") ?? "ap").ToLowerInvariant();
+            var nombre = $"archivos_{tipo}_migrados_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            try
+            {
+                await using var connMs = ConnMs(cfg);
+                using var wb = new XLWorkbook();
+                var esAp = tipo == "ap";
+                var ws = wb.AddWorksheet(esAp ? "AP" : "MS");
+
+                string[] headers = esAp
+                    ? ["Id", "GATipo", "Nombre", "Empresa", "Proveedor", "TipoDoc",
+                       "Obligacion", "OC/OS", "Estado", "Intentos", "FechaTraslado", "ArchivoId", "RutaDestino", "Carpeta"]
+                    : ["IdArchivo", "Tabla", "IdRegistro", "Nombre", "Empresa",
+                       "Estado", "Intentos", "FechaTraslado", "ArchivoId", "RutaDestino", "Carpeta"];
+                string[] keys = esAp
+                    ? ["IdApDocumentoArchivo", "Gatipo", "Ganombre", "Empresa", "Proveedor",
+                       "ObligacionTipoDocumento", "ObligacionNumeroDocumento", "Referencias",
+                       "Estado", "Intentos", "FechaTraslado", "ArchivoId", "RutaDestino"]
+                    : ["IdArchivo", "Tabla", "IdRegistro", "Nombre", "Empresa",
+                       "Estado", "Intentos", "FechaTraslado", "ArchivoId", "RutaDestino"];
+
+                for (var c = 0; c < headers.Length; c++)
+                {
+                    ws.Cell(1, c + 1).Value = headers[c];
+                    ws.Cell(1, c + 1).Style.Font.Bold = true;
+                }
+
+                var fila = 2;
+                var page = 1;
+                const int perPage = 200; // tope del SP
+                while (true)
+                {
+                    JsonArray rows;
+                    if (esAp)
+                    {
+                        var data = await _ms.ArchivosApAsync(connMs,
+                            JsonSerialize(new { estado = "COMPLETADO", page, per_page = perPage }));
+                        rows = (JsonArray)JsonNode.Parse(data.GetProperty("rows").GetRawText())!;
+                        await EnriquecerReferenciasAsync(cfg, rows);
+                    }
+                    else
+                    {
+                        var data = await _ms.ArchivosMsAsync(connMs,
+                            JsonSerialize(new { estado = "COMPLETADO", page, per_page = perPage }));
+                        rows = (JsonArray)JsonNode.Parse(data.GetProperty("rows").GetRawText())!;
+                        AplicarEmpresaMs(cfg, rows);
+                    }
+                    if (rows.Count == 0) break;
+
+                    foreach (var r in rows.OfType<JsonObject>())
+                    {
+                        for (var c = 0; c < keys.Length; c++)
+                            SetCellExcel(ws.Cell(fila, c + 1), r[keys[c]]);
+
+                        // RutaDestino: link al archivo. Carpeta: la ruta de la grilla
+                        // (termina en el nro. de OC/OS) con link al explorador.
+                        var rutaDestino = r["RutaDestino"]?.GetValue<string>();
+                        if (!string.IsNullOrEmpty(rutaDestino))
+                        {
+                            var ix = rutaDestino.Replace('/', '\\').LastIndexOf('\\');
+                            var carpeta = ix > 0 ? rutaDestino[..ix] : rutaDestino;
+                            HipervinculoUnc(ws.Cell(fila, keys.Length), rutaDestino, "Abrir archivo");
+                            var celdaCarpeta = ws.Cell(fila, keys.Length + 1);
+                            celdaCarpeta.Value = carpeta;
+                            HipervinculoUnc(celdaCarpeta, carpeta, "Abrir carpeta en el explorador");
+                        }
+                        fila++;
+                    }
+                    if (rows.Count < perPage) break;
+                    page++;
+                }
+
+                ws.Column(esAp ? 3 : 4).Width = 40;   // Nombre
+                ws.Column(esAp ? 13 : 10).Width = 80; // RutaDestino
+                ws.Column(esAp ? 14 : 11).Width = 70; // Carpeta
+
+                using var ms = new MemoryStream();
+                wb.SaveAs(ms);
+                return (ms.ToArray(), nombre, null);
+            }
+            catch (Exception ex)
+            {
+                return (null, nombre, ex.Message);
+            }
+        }
+
+        private static void HipervinculoUnc(IXLCell cell, string destino, string tooltip)
+        {
+            var link = cell.CreateHyperlink();
+            link.ExternalAddress = new Uri(destino);
+            link.Tooltip = tooltip;
+            cell.Style.Font.FontColor = XLColor.Blue;
+            cell.Style.Font.Underline = XLFontUnderlineValues.Single;
+        }
+
+        private static void SetCellExcel(IXLCell cell, JsonNode? node)
+        {
+            switch (node)
+            {
+                case null: cell.Value = ""; break;
+                case JsonValue v when v.TryGetValue<long>(out var l): cell.Value = l; break;
+                case JsonValue v when v.TryGetValue<double>(out var d): cell.Value = d; break;
+                case JsonValue v when v.TryGetValue<bool>(out var b): cell.Value = b; break;
+                case JsonValue v when v.TryGetValue<string>(out var s): cell.Value = s; break;
+                default: cell.Value = node.ToString(); break;
+            }
         }
 
         /// <summary>Agrega "Referencias" (OC/OS) y "Empresa" a cada fila AP, como _referencias_ap de Flask.</summary>
