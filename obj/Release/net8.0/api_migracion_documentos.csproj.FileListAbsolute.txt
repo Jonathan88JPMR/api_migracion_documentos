@@ -75,7 +75,6 @@ C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_d
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\publish\api_migracion_documentos.staticwebassets.endpoints.json
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\publish\appsettings.Development.json
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\publish\appsettings.json
-C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\staticwebassets.upToDateCheck.txt
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\appsettings.Production.json
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\ClosedXML.dll
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\ClosedXML.Parser.dll
@@ -85,3 +84,4 @@ C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_d
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\RBush.dll
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\SixLabors.Fonts.dll
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\System.IO.Packaging.dll
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\staticwebassets.upToDateCheck.txt

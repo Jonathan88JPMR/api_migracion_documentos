@@ -34,7 +34,7 @@ BEGIN
     DECLARE @__data NVARCHAR(MAX);
     DECLARE @err NVARCHAR(500);
     BEGIN TRY
-        SET @__data = (
+        SET @__data = ISNULL((
             SELECT CAST(d.Proveedor AS VARCHAR(20)) AS p,
                    RTRIM(d.ObligacionTipoDocumento) AS t,
                    RTRIM(d.ObligacionNumeroDocumento) AS n,
@@ -50,7 +50,7 @@ BEGIN
                     WHERE CAST(d.Proveedor AS VARCHAR(20)) = c.p
                       AND RTRIM(d.ObligacionTipoDocumento) = c.t
                       AND RTRIM(d.ObligacionNumeroDocumento) = c.n)
-            FOR JSON PATH);
+            FOR JSON PATH), '[]');
         EXEC dbo.sp_mig_respuesta 'success', 'Referencias', @__data;
     END TRY
     BEGIN CATCH
@@ -77,7 +77,7 @@ BEGIN
     BEGIN TRY
         DECLARE @refTipo VARCHAR(5) = JSON_VALUE(@json, '$.refTipo');
 
-        SET @__data = (
+        SET @__data = ISNULL((
             SELECT DISTINCT CAST(d.Proveedor AS VARCHAR(20)) AS p,
                    RTRIM(d.ObligacionTipoDocumento) AS t,
                    RTRIM(d.ObligacionNumeroDocumento) AS n
@@ -89,7 +89,7 @@ BEGIN
                     WHERE CAST(d.Proveedor AS VARCHAR(20)) = c.p
                       AND RTRIM(d.ObligacionTipoDocumento) = c.t
                       AND RTRIM(d.ObligacionNumeroDocumento) = c.n)
-            FOR JSON PATH);
+            FOR JSON PATH), '[]');
         EXEC dbo.sp_mig_respuesta 'success', 'Claves por referencia', @__data;
     END TRY
     BEGIN CATCH
@@ -116,14 +116,14 @@ BEGIN
         DECLARE @numero VARCHAR(30) = JSON_VALUE(@json, '$.numero');
         DECLARE @tipo VARCHAR(5) = NULLIF(JSON_VALUE(@json, '$.tipo'), '');
 
-        SET @__data = (
+        SET @__data = ISNULL((
             SELECT DISTINCT CAST(d.Proveedor AS VARCHAR(20)) AS p,
                    RTRIM(d.ObligacionTipoDocumento) AS t,
                    RTRIM(d.ObligacionNumeroDocumento) AS n
             FROM dbo.AP_Documentos d
             WHERE RTRIM(d.ReferenciaNumeroDocumento) = @numero
               AND (@tipo IS NULL OR RTRIM(d.ReferenciaTipoDocumento) = @tipo)
-            FOR JSON PATH);
+            FOR JSON PATH), '[]');
         EXEC dbo.sp_mig_respuesta 'success', 'Obligaciones de referencia', @__data;
     END TRY
     BEGIN CATCH
@@ -155,5 +155,18 @@ BEGIN
         SET @err = ERROR_MESSAGE();
         EXEC dbo.sp_mig_respuesta 'error', @err, NULL;
     END CATCH
+END;
+GO
+
+/* ----------------------------------------------------------
+   Permisos de ejecucion para el usuario del servicio.
+   ---------------------------------------------------------- */
+IF DATABASE_PRINCIPAL_ID('usr_migracion_adjuntos') IS NOT NULL
+BEGIN
+    GRANT EXECUTE ON dbo.sp_mig_respuesta               TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_referencias             TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_claves_por_ref          TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_obligaciones_referencia TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_gd_prueba_count         TO usr_migracion_adjuntos;
 END;
 GO

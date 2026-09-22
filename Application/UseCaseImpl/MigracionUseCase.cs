@@ -57,6 +57,34 @@ namespace api_migracion_documentos.Application.UseCaseImpl
         private static string? GetStr(Dictionary<string, object?> cfg, string key)
             => cfg.TryGetValue(key, out var v) ? v?.ToString() : null;
 
+        /// <summary>"rows" del data de un SP listado; [] si el SP la omitio
+        /// (FOR JSON omite claves NULL cuando la pagina queda vacia).</summary>
+        private static JsonArray RowsProp(JsonElement data)
+            => data.ValueKind == JsonValueKind.Object
+               && data.TryGetProperty("rows", out var r)
+               && r.ValueKind == JsonValueKind.Array
+                ? (JsonArray)JsonNode.Parse(r.GetRawText())!
+                : [];
+
+        private static int IntProp(JsonElement data, string prop)
+            => data.ValueKind == JsonValueKind.Object
+               && data.TryGetProperty(prop, out var v)
+               && v.ValueKind == JsonValueKind.Number
+                ? v.GetInt32() : 0;
+
+        /// <summary>Elementos si el JsonElement es array; vacio en otro caso.</summary>
+        private static IEnumerable<JsonElement> Arr(JsonElement el)
+            => el.ValueKind == JsonValueKind.Array
+                ? el.EnumerateArray() : Enumerable.Empty<JsonElement>();
+
+        /// <summary>Propiedad array del data de un SP; [] si falta.</summary>
+        private static JsonArray ArrProp(JsonElement data, string prop)
+            => data.ValueKind == JsonValueKind.Object
+               && data.TryGetProperty(prop, out var v)
+               && v.ValueKind == JsonValueKind.Array
+                ? (JsonArray)JsonNode.Parse(v.GetRawText())!
+                : [];
+
         private static Dictionary<string, object?> CfgFromJson(JsonElement data)
         {
             var cfg = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
@@ -277,7 +305,7 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                         // Filtro OC/OS: cruzar claves contra AP_Documentos (Spring)
                         var cand = await _ms.CandidatosApAsync(connMs,
                             JsonSerialize(new { estado, gatipo }));
-                        var candidatos = cand.EnumerateArray()
+                        var candidatos = Arr(cand)
                             .Select(c => new
                             {
                                 id = c.GetProperty("id").GetInt32(),
@@ -299,7 +327,7 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                             var grupo = claves.Skip(i).Take(150).ToList();
                             var res = await _spring.ClavesPorRefAsync(connSpring,
                                 JsonSerialize(new { refTipo = referencia, claves = grupo }));
-                            foreach (var c in res.EnumerateArray())
+                            foreach (var c in Arr(res))
                                 clavesOk.Add($"{c.GetProperty("p").GetString()}|{c.GetProperty("t").GetString()}|{c.GetProperty("n").GetString()}");
                         }
 
@@ -311,16 +339,9 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                         var total = ids.Count;
                         var pageIds = ids.Skip((page - 1) * perPage).Take(perPage).ToList();
 
-                        JsonArray rows;
-                        if (pageIds.Count == 0)
-                        {
-                            rows = new JsonArray();
-                        }
-                        else
-                        {
-                            var rowsData = await _ms.ArchivosApAsync(connMs, JsonSerialize(new { ids = pageIds }));
-                            rows = (JsonArray)JsonNode.Parse(rowsData.GetRawText())!;
-                        }
+                        var rowsData = await _ms.ArchivosApAsync(connMs,
+                            JsonSerialize(new { ids = pageIds, gatipo }));
+                        var rows = RowsProp(rowsData);
                         await EnriquecerReferenciasAsync(cfg, rows);
 
                         var body = Ok();
@@ -328,32 +349,35 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                         body["total"] = total;
                         body["page"] = page;
                         body["per_page"] = perPage;
+                        body["por_estado"] = ArrProp(rowsData, "por_estado");
                         return new ApiResult(body);
                     }
 
                     var data = await _ms.ArchivosApAsync(connMs,
                         JsonSerialize(new { estado, gatipo, page, per_page = perPage }));
-                    var rowsNode = (JsonArray)JsonNode.Parse(data.GetProperty("rows").GetRawText())!;
+                    var rowsNode = RowsProp(data);
                     await EnriquecerReferenciasAsync(cfg, rowsNode);
 
                     var bodyAp = Ok();
                     bodyAp["rows"] = rowsNode;
-                    bodyAp["total"] = data.GetProperty("total").GetInt32();
+                    bodyAp["total"] = IntProp(data, "total");
                     bodyAp["page"] = page;
                     bodyAp["per_page"] = perPage;
+                    bodyAp["por_estado"] = ArrProp(data, "por_estado");
                     return new ApiResult(bodyAp);
                 }
                 else
                 {
                     var data = await _ms.ArchivosMsAsync(connMs,
                         JsonSerialize(new { estado, page, per_page = perPage }));
-                    var rowsMs = (JsonArray)JsonNode.Parse(data.GetProperty("rows").GetRawText())!;
+                    var rowsMs = RowsProp(data);
                     AplicarEmpresaMs(cfg, rowsMs);
                     var body = Ok();
                     body["rows"] = rowsMs;
-                    body["total"] = data.GetProperty("total").GetInt32();
+                    body["total"] = IntProp(data, "total");
                     body["page"] = page;
                     body["per_page"] = perPage;
+                    body["por_estado"] = ArrProp(data, "por_estado");
                     return new ApiResult(body);
                 }
             }
@@ -442,14 +466,14 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                     {
                         var data = await _ms.ArchivosApAsync(connMs,
                             JsonSerialize(new { estado = "COMPLETADO", page, per_page = perPage }));
-                        rows = (JsonArray)JsonNode.Parse(data.GetProperty("rows").GetRawText())!;
+                        rows = RowsProp(data);
                         await EnriquecerReferenciasAsync(cfg, rows);
                     }
                     else
                     {
                         var data = await _ms.ArchivosMsAsync(connMs,
                             JsonSerialize(new { estado = "COMPLETADO", page, per_page = perPage }));
-                        rows = (JsonArray)JsonNode.Parse(data.GetProperty("rows").GetRawText())!;
+                        rows = RowsProp(data);
                         AplicarEmpresaMs(cfg, rows);
                     }
                     if (rows.Count == 0) break;
@@ -541,7 +565,7 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                 {
                     var grupo = claves.Skip(i).Take(150).ToList();
                     var res = await _spring.ReferenciasAsync(connSpring, JsonSerialize(new { claves = grupo }));
-                    foreach (var c in res.EnumerateArray())
+                    foreach (var c in Arr(res))
                     {
                         var key = $"{c.GetProperty("p").GetString()}|{c.GetProperty("t").GetString()}|{c.GetProperty("n").GetString()}";
                         var refTipo = c.GetProperty("refTipo").GetString();
@@ -734,7 +758,7 @@ namespace api_migracion_documentos.Application.UseCaseImpl
 
                 var oblData = await _spring.ObligacionesReferenciaAsync(connSpring,
                     JsonSerialize(new { numero, tipo }));
-                var obligaciones = oblData.EnumerateArray()
+                var obligaciones = Arr(oblData)
                     .Select(c => new
                     {
                         p = c.GetProperty("p").GetString() ?? "",

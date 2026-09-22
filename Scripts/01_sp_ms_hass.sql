@@ -273,16 +273,17 @@ BEGIN
         DECLARE @estado VARCHAR(20) = NULLIF(JSON_VALUE(@json, '$.estado'), '');
         DECLARE @gatipo VARCHAR(20) = NULLIF(JSON_VALUE(@json, '$.gatipo'), '');
 
-        SET @__data = (
-            SELECT t.IdApDocumentoArchivo AS id,
+        SET @__data = ISNULL((
+            SELECT a.IdApDocumentoArchivo AS id,
                    CAST(a.Proveedor AS VARCHAR(20)) AS p,
                    RTRIM(a.ObligacionTipoDocumento) AS t,
                    RTRIM(a.ObligacionNumeroDocumento) AS n
-            FROM dbo.MS_AP_DocumentoArchivoTraslado t
-            JOIN dbo.MS_AP_DocumentoArchivo a ON a.IdApDocumentoArchivo = t.IdApDocumentoArchivo
-            WHERE (@estado IS NULL OR t.Estado = @estado)
+            FROM dbo.MS_AP_DocumentoArchivo a
+            LEFT JOIN dbo.MS_AP_DocumentoArchivoTraslado t ON t.IdApDocumentoArchivo = a.IdApDocumentoArchivo
+            WHERE (t.IdApDocumentoArchivo IS NOT NULL OR a.Gadatos IS NOT NULL)
+              AND (@estado IS NULL OR ISNULL(t.Estado, 'PENDIENTE') = @estado)
               AND (@gatipo IS NULL OR a.Gatipo = @gatipo)
-            FOR JSON PATH);
+            FOR JSON PATH), '[]');
         EXEC dbo.sp_mig_respuesta 'success', 'Candidatos', @__data;
     END TRY
     BEGIN CATCH
@@ -305,21 +306,34 @@ BEGIN
     DECLARE @__data NVARCHAR(MAX);
     DECLARE @err NVARCHAR(500);
     BEGIN TRY
-        IF EXISTS (SELECT 1 FROM OPENJSON(@json, '$.ids'))
+        IF EXISTS (SELECT 1 FROM OPENJSON(@json) WHERE [key] = 'ids')
         BEGIN
+            DECLARE @gatipo_ids VARCHAR(20) = NULLIF(JSON_VALUE(@json, '$.gatipo'), '');
             SET @__data = (
-                SELECT t.IdApDocumentoArchivo, a.Gatipo, a.Ganombre,
-                       CAST(a.Proveedor AS VARCHAR(20)) AS Proveedor,
-                       a.ObligacionTipoDocumento,
-                       RTRIM(a.ObligacionNumeroDocumento) AS ObligacionNumeroDocumento,
-                       t.Estado, t.Intentos, t.Etapa, t.FechaPrimerIntento,
-                       t.FechaUltimoIntento, t.FechaTraslado, t.RutaDestino,
-                       t.IdGrupo, t.ArchivoId, t.MensajeError
-                FROM dbo.MS_AP_DocumentoArchivoTraslado t
-                JOIN dbo.MS_AP_DocumentoArchivo a ON a.IdApDocumentoArchivo = t.IdApDocumentoArchivo
-                WHERE t.IdApDocumentoArchivo IN (SELECT TRY_CAST(value AS INT) FROM OPENJSON(@json, '$.ids'))
-                ORDER BY t.IdApDocumentoArchivo DESC
-                FOR JSON PATH);
+                SELECT JSON_QUERY(ISNULL((
+                    SELECT a.IdApDocumentoArchivo, a.Gatipo, a.Ganombre,
+                           CAST(a.Proveedor AS VARCHAR(20)) AS Proveedor,
+                           a.ObligacionTipoDocumento,
+                           RTRIM(a.ObligacionNumeroDocumento) AS ObligacionNumeroDocumento,
+                           ISNULL(t.Estado, 'PENDIENTE') AS Estado,
+                           t.Intentos, t.Etapa, t.FechaPrimerIntento,
+                           t.FechaUltimoIntento, t.FechaTraslado, t.RutaDestino,
+                           t.IdGrupo, t.ArchivoId, t.MensajeError
+                    FROM dbo.MS_AP_DocumentoArchivo a
+                    LEFT JOIN dbo.MS_AP_DocumentoArchivoTraslado t ON t.IdApDocumentoArchivo = a.IdApDocumentoArchivo
+                    WHERE a.IdApDocumentoArchivo IN (SELECT TRY_CAST(value AS INT) FROM OPENJSON(@json, '$.ids'))
+                    ORDER BY a.IdApDocumentoArchivo DESC
+                    FOR JSON PATH), '[]')) AS rows,
+                       JSON_QUERY(ISNULL((
+                    SELECT ISNULL(t.Estado, 'PENDIENTE') AS Estado, COUNT(*) AS total
+                    FROM dbo.MS_AP_DocumentoArchivo a
+                    LEFT JOIN dbo.MS_AP_DocumentoArchivoTraslado t ON t.IdApDocumentoArchivo = a.IdApDocumentoArchivo
+                    WHERE (t.IdApDocumentoArchivo IS NOT NULL OR a.Gadatos IS NOT NULL)
+                      AND (@gatipo_ids IS NULL OR a.Gatipo = @gatipo_ids)
+                    GROUP BY ISNULL(t.Estado, 'PENDIENTE')
+                    ORDER BY COUNT(*) DESC
+                    FOR JSON PATH), '[]')) AS por_estado
+                FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
             EXEC dbo.sp_mig_respuesta 'success', 'Archivos AP', @__data;
             RETURN;
         END
@@ -336,27 +350,39 @@ BEGIN
 
         SET @__data = (
             SELECT
-                (SELECT COUNT(*) FROM dbo.MS_AP_DocumentoArchivoTraslado t
-                 JOIN dbo.MS_AP_DocumentoArchivo a ON a.IdApDocumentoArchivo = t.IdApDocumentoArchivo
-                 WHERE (@estado IS NULL OR t.Estado = @estado)
+                (SELECT COUNT(*) FROM dbo.MS_AP_DocumentoArchivo a
+                 LEFT JOIN dbo.MS_AP_DocumentoArchivoTraslado t ON t.IdApDocumentoArchivo = a.IdApDocumentoArchivo
+                 WHERE (t.IdApDocumentoArchivo IS NOT NULL OR a.Gadatos IS NOT NULL)
+                   AND (@estado IS NULL OR ISNULL(t.Estado, 'PENDIENTE') = @estado)
                    AND (@gatipo IS NULL OR a.Gatipo = @gatipo)) AS total,
-                JSON_QUERY((SELECT * FROM (
-                    SELECT t.IdApDocumentoArchivo, a.Gatipo, a.Ganombre,
+                JSON_QUERY(ISNULL((SELECT * FROM (
+                    SELECT a.IdApDocumentoArchivo, a.Gatipo, a.Ganombre,
                            CAST(a.Proveedor AS VARCHAR(20)) AS Proveedor,
                            a.ObligacionTipoDocumento,
                            RTRIM(a.ObligacionNumeroDocumento) AS ObligacionNumeroDocumento,
-                           t.Estado, t.Intentos, t.Etapa, t.FechaPrimerIntento,
+                           ISNULL(t.Estado, 'PENDIENTE') AS Estado,
+                           t.Intentos, t.Etapa, t.FechaPrimerIntento,
                            t.FechaUltimoIntento, t.FechaTraslado, t.RutaDestino,
                            t.IdGrupo, t.ArchivoId, t.MensajeError,
-                           ROW_NUMBER() OVER (ORDER BY t.IdApDocumentoArchivo DESC) AS rn
-                    FROM dbo.MS_AP_DocumentoArchivoTraslado t
-                    JOIN dbo.MS_AP_DocumentoArchivo a ON a.IdApDocumentoArchivo = t.IdApDocumentoArchivo
-                    WHERE (@estado IS NULL OR t.Estado = @estado)
+                           ROW_NUMBER() OVER (ORDER BY a.IdApDocumentoArchivo DESC) AS rn
+                    FROM dbo.MS_AP_DocumentoArchivo a
+                    LEFT JOIN dbo.MS_AP_DocumentoArchivoTraslado t ON t.IdApDocumentoArchivo = a.IdApDocumentoArchivo
+                    WHERE (t.IdApDocumentoArchivo IS NOT NULL OR a.Gadatos IS NOT NULL)
+                      AND (@estado IS NULL OR ISNULL(t.Estado, 'PENDIENTE') = @estado)
                       AND (@gatipo IS NULL OR a.Gatipo = @gatipo)
                 ) base
                 WHERE rn BETWEEN @start AND @end
                 ORDER BY rn
-                FOR JSON PATH)) AS rows
+                FOR JSON PATH), '[]')) AS rows,
+                JSON_QUERY(ISNULL((
+                    SELECT ISNULL(t.Estado, 'PENDIENTE') AS Estado, COUNT(*) AS total
+                    FROM dbo.MS_AP_DocumentoArchivo a
+                    LEFT JOIN dbo.MS_AP_DocumentoArchivoTraslado t ON t.IdApDocumentoArchivo = a.IdApDocumentoArchivo
+                    WHERE (t.IdApDocumentoArchivo IS NOT NULL OR a.Gadatos IS NOT NULL)
+                      AND (@gatipo IS NULL OR a.Gatipo = @gatipo)
+                    GROUP BY ISNULL(t.Estado, 'PENDIENTE')
+                    ORDER BY COUNT(*) DESC
+                    FOR JSON PATH), '[]')) AS por_estado
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
         EXEC dbo.sp_mig_respuesta 'success', 'Archivos AP', @__data;
     END TRY
@@ -390,23 +416,31 @@ BEGIN
 
         SET @__data = (
             SELECT
-                (SELECT COUNT(*) FROM dbo.MS_ArchivoTraslado t
-                 JOIN dbo.MS_Archivo a ON a.IdArchivo = t.IdArchivo
-                 WHERE (@estado IS NULL OR t.Estado = @estado)) AS total,
-                JSON_QUERY((SELECT * FROM (
-                    SELECT CONVERT(VARCHAR(36), t.IdArchivo) AS IdArchivo,
+                (SELECT COUNT(*) FROM dbo.MS_Archivo a
+                 LEFT JOIN dbo.MS_ArchivoTraslado t ON t.IdArchivo = a.IdArchivo
+                 WHERE (@estado IS NULL OR ISNULL(t.Estado, 'PENDIENTE') = @estado)) AS total,
+                JSON_QUERY(ISNULL((SELECT * FROM (
+                    SELECT CONVERT(VARCHAR(36), a.IdArchivo) AS IdArchivo,
                            a.Tabla, a.Id AS IdRegistro, a.Nombre,
                            RTRIM(a.Empresa) AS Empresa,
-                           a.Tipo AS Mime, t.Estado, t.Intentos, t.Etapa,
+                           a.Tipo AS Mime, ISNULL(t.Estado, 'PENDIENTE') AS Estado,
+                           t.Intentos, t.Etapa,
                            t.FechaTraslado, t.RutaDestino, t.ArchivoId, t.MensajeError,
                            ROW_NUMBER() OVER (ORDER BY t.FechaTraslado DESC) AS rn
-                    FROM dbo.MS_ArchivoTraslado t
-                    JOIN dbo.MS_Archivo a ON a.IdArchivo = t.IdArchivo
-                    WHERE (@estado IS NULL OR t.Estado = @estado)
+                    FROM dbo.MS_Archivo a
+                    LEFT JOIN dbo.MS_ArchivoTraslado t ON t.IdArchivo = a.IdArchivo
+                    WHERE (@estado IS NULL OR ISNULL(t.Estado, 'PENDIENTE') = @estado)
                 ) base
                 WHERE rn BETWEEN @start AND @end
                 ORDER BY rn
-                FOR JSON PATH)) AS rows
+                FOR JSON PATH), '[]')) AS rows,
+                JSON_QUERY(ISNULL((
+                    SELECT ISNULL(t.Estado, 'PENDIENTE') AS Estado, COUNT(*) AS total
+                    FROM dbo.MS_Archivo a
+                    LEFT JOIN dbo.MS_ArchivoTraslado t ON t.IdArchivo = a.IdArchivo
+                    GROUP BY ISNULL(t.Estado, 'PENDIENTE')
+                    ORDER BY COUNT(*) DESC
+                    FOR JSON PATH), '[]')) AS por_estado
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
         EXEC dbo.sp_mig_respuesta 'success', 'Archivos MS', @__data;
     END TRY
@@ -556,5 +590,26 @@ BEGIN
         SET @err = ERROR_MESSAGE();
         EXEC dbo.sp_mig_respuesta 'error', @err, NULL;
     END CATCH
+END;
+GO
+
+/* ----------------------------------------------------------
+   Permisos de ejecucion para el usuario del servicio.
+   ---------------------------------------------------------- */
+IF DATABASE_PRINCIPAL_ID('usr_migracion_adjuntos') IS NOT NULL
+BEGIN
+    GRANT EXECUTE ON dbo.sp_mig_respuesta         TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_entornos          TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_entorno_activo    TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_config            TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_stats             TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_candidatos_ap     TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_archivos_ap       TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_archivos_ms       TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_preview_ap        TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_preview_ms        TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_pendientes        TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_pendientes_orden  TO usr_migracion_adjuntos;
+    GRANT EXECUTE ON dbo.sp_mig_actualizar_lotes  TO usr_migracion_adjuntos;
 END;
 GO
