@@ -396,6 +396,7 @@ BEGIN
                 JSON_QUERY((SELECT * FROM (
                     SELECT CONVERT(VARCHAR(36), t.IdArchivo) AS IdArchivo,
                            a.Tabla, a.Id AS IdRegistro, a.Nombre,
+                           RTRIM(a.Empresa) AS Empresa,
                            a.Tipo AS Mime, t.Estado, t.Intentos, t.Etapa,
                            t.FechaTraslado, t.RutaDestino, t.ArchivoId, t.MensajeError,
                            ROW_NUMBER() OVER (ORDER BY t.FechaTraslado DESC) AS rn

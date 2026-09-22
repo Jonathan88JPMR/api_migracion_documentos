@@ -346,8 +346,10 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                 {
                     var data = await _ms.ArchivosMsAsync(connMs,
                         JsonSerialize(new { estado, page, per_page = perPage }));
+                    var rowsMs = (JsonArray)JsonNode.Parse(data.GetProperty("rows").GetRawText())!;
+                    AplicarEmpresaMs(cfg, rowsMs);
                     var body = Ok();
-                    body["rows"] = JsonNode.Parse(data.GetProperty("rows").GetRawText());
+                    body["rows"] = rowsMs;
                     body["total"] = data.GetProperty("total").GetInt32();
                     body["page"] = page;
                     body["per_page"] = perPage;
@@ -364,10 +366,48 @@ namespace api_migracion_documentos.Application.UseCaseImpl
             }
         }
 
-        /// <summary>Agrega "Referencias" (OC/OS) a cada fila AP, como _referencias_ap de Flask.</summary>
+        /// <summary>Ultimo segmento de RUTA_RAIZ ("PRUEBAS" o "PROD").</summary>
+        private static string SegmentoRaiz(Dictionary<string, object?> cfg)
+        {
+            var raiz = GetStr(cfg, "RUTA_RAIZ");
+            var seg = raiz?.Replace('/', '\\')
+                .Split('\\', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+            return string.IsNullOrEmpty(seg) ? "PROD" : seg;
+        }
+
+        /// <summary>Empresa = segmento que sigue a la raiz en una ruta UNC
+        /// (\\server\SpringGestionDoc\PRUEBAS\EMPRESA\...). Las rutas de
+        /// AP_Documentos.RutaArchivo siempre usan el segmento PROD.</summary>
+        private static string? EmpresaDeRuta(string? ruta, string segmentoRaiz)
+        {
+            if (string.IsNullOrWhiteSpace(ruta)) return null;
+            var partes = ruta.Replace('/', '\\')
+                .Split('\\', StringSplitOptions.RemoveEmptyEntries);
+            var idx = Array.FindIndex(partes,
+                p => p.Equals(segmentoRaiz, StringComparison.OrdinalIgnoreCase));
+            if (idx < 0 && !segmentoRaiz.Equals("PROD", StringComparison.OrdinalIgnoreCase))
+                idx = Array.FindIndex(partes, p => p.Equals("PROD", StringComparison.OrdinalIgnoreCase));
+            return idx >= 0 && idx + 1 < partes.Length ? partes[idx + 1] : null;
+        }
+
+        /// <summary>Asigna "Empresa" a filas MS: RutaDestino (destino real) o la
+        /// columna Empresa del portal si aun no se traslado.</summary>
+        private static void AplicarEmpresaMs(Dictionary<string, object?> cfg, JsonArray rows)
+        {
+            var seg = SegmentoRaiz(cfg);
+            foreach (var r in rows.OfType<JsonObject>())
+                r["Empresa"] = EmpresaDeRuta(r["RutaDestino"]?.GetValue<string>(), seg)
+                               ?? r["Empresa"]?.GetValue<string>() ?? "";
+        }
+
+        /// <summary>Agrega "Referencias" (OC/OS) y "Empresa" a cada fila AP, como _referencias_ap de Flask.</summary>
         private async Task EnriquecerReferenciasAsync(Dictionary<string, object?> cfg, JsonArray rows)
         {
             if (rows.Count == 0) return;
+            var seg = SegmentoRaiz(cfg);
+            foreach (var r in rows.OfType<JsonObject>())
+                r["Empresa"] = EmpresaDeRuta(r["RutaDestino"]?.GetValue<string>(), seg) ?? "";
+
             var claves = rows.OfType<JsonObject>()
                 .Select(r => new
                 {
@@ -383,6 +423,7 @@ namespace api_migracion_documentos.Application.UseCaseImpl
             {
                 await using var connSpring = ConnSpring(cfg);
                 var refMap = new Dictionary<string, SortedSet<string>>();
+                var empMap = new Dictionary<string, string>();
                 for (var i = 0; i < claves.Count; i += 150)
                 {
                     var grupo = claves.Skip(i).Take(150).ToList();
@@ -397,12 +438,22 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                             if (!refMap.TryGetValue(key, out var set)) refMap[key] = set = new SortedSet<string>();
                             set.Add($"{refTipo} {refNum}");
                         }
+                        if (!empMap.ContainsKey(key)
+                            && c.TryGetProperty("ruta", out var rutaEl)
+                            && rutaEl.ValueKind == JsonValueKind.String)
+                        {
+                            var emp = EmpresaDeRuta(rutaEl.GetString(), seg);
+                            if (emp != null) empMap[key] = emp;
+                        }
                     }
                 }
                 foreach (var r in rows.OfType<JsonObject>())
                 {
                     var key = $"{(r["Proveedor"]?.GetValue<string>() ?? "").Trim()}|{(r["ObligacionTipoDocumento"]?.GetValue<string>() ?? "").Trim()}|{(r["ObligacionNumeroDocumento"]?.GetValue<string>() ?? "").Trim()}";
                     r["Referencias"] = refMap.TryGetValue(key, out var set) ? string.Join(", ", set) : "";
+                    if ((r["Empresa"]?.GetValue<string>() ?? "") == ""
+                        && empMap.TryGetValue(key, out var emp))
+                        r["Empresa"] = emp;
                 }
             }
             catch

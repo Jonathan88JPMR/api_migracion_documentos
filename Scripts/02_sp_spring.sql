@@ -39,7 +39,8 @@ BEGIN
                    RTRIM(d.ObligacionTipoDocumento) AS t,
                    RTRIM(d.ObligacionNumeroDocumento) AS n,
                    RTRIM(d.ReferenciaTipoDocumento) AS refTipo,
-                   RTRIM(d.ReferenciaNumeroDocumento) AS refNum
+                   RTRIM(d.ReferenciaNumeroDocumento) AS refNum,
+                   d.RutaArchivo AS ruta
             FROM dbo.AP_Documentos d
             WHERE d.ReferenciaTipoDocumento IS NOT NULL
               AND d.ReferenciaNumeroDocumento IS NOT NULL
