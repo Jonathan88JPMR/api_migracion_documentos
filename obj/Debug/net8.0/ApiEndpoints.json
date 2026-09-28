@@ -169,6 +169,22 @@
   },
   {
     "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
+    "Method": "RunRango",
+    "RelativePath": "api/migracion-documentos/run-rango",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "System.Text.Json.JsonElement",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "api_migracion_documentos.Infraestructure.Controller.MigracionController",
     "Method": "RunStatus",
     "RelativePath": "api/migracion-documentos/run-status",
     "HttpMethod": "POST",

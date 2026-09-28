@@ -1,4 +1,6 @@
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\api_migracion_documentos.exe
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\publish\web.config
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\web.config
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\web.config
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\appsettings.Development.json
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\appsettings.json
@@ -8,6 +10,18 @@ C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_d
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\api_migracion_documentos.staticwebassets.endpoints.json
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\appsettings.Development.json
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\appsettings.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\appsettings.Production.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\api_migracion_documentos.deps.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\api_migracion_documentos.runtimeconfig.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\api_migracion_documentos.staticwebassets.endpoints.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\appsettings.Development.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\appsettings.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\appsettings.Production.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\publish\api_migracion_documentos.deps.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\publish\api_migracion_documentos.runtimeconfig.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\publish\api_migracion_documentos.staticwebassets.endpoints.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\publish\appsettings.Development.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\publish\publish\publish\appsettings.json
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\api_migracion_documentos.dll
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\api_migracion_documentos.deps.json
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\PubTmp\Out\api_migracion_documentos.runtimeconfig.json

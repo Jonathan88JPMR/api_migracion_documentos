@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -18,6 +19,7 @@ namespace api_migracion_documentos.Infraestructure.Services
             "MODO_SERVICIO", "SERVIDOR_MS_HASS", "BD_MS_HASS", "SERVIDOR_SPRING", "BD_SPRING",
             "RUTA_PRUEBA_LOCAL", "RUTA_RAIZ", "TIPO_COPIA_PRUEBA", "MODO_PRUEBA",
             "BATCH_PRUEBA", "BATCH_AP_DOCUMENTO_PRUEBA", "TABLA_ADJUNTOS", "USUARIO_MIGRACION", "SQL_USER",
+            "FECHA_MINIMA", "FECHA_MAXIMA",
         ];
 
         public ServicioFiles(IConfiguration configuration)
@@ -28,7 +30,21 @@ namespace api_migracion_documentos.Infraestructure.Services
 
         public string ConfigModoPath => Path.Combine(_rutaServicio, _configuration["Migracion:ConfigModo"]!);
         public string ConfigEnvPath => Path.Combine(_rutaServicio, _configuration["Migracion:ConfigEnv"]!);
-        public string LogPath => Path.Combine(_rutaServicio, _configuration["Migracion:LogPrueba"]!);
+        /// <summary>Log del servicio segun el modo: prueba o produccion. Si no
+        /// existe en la carpeta del servicio, busca el fallback que usa el propio
+        /// servicio (ProgramData\servicio_documentos) cuando no tiene permiso ahi.</summary>
+        public string LogPath(bool produccion)
+        {
+            var nombre = produccion
+                ? _configuration["Migracion:LogProd"] ?? _configuration["Migracion:LogPrueba"]!
+                : _configuration["Migracion:LogPrueba"]!;
+            var principal = Path.Combine(_rutaServicio, nombre);
+            if (File.Exists(principal)) return principal;
+            var fallback = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "servicio_documentos", nombre);
+            return File.Exists(fallback) ? fallback : principal;
+        }
         public string IniciadorPath => Path.Combine(_rutaServicio, _configuration["Migracion:Iniciador"]!);
 
         public Dictionary<string, string> ParseConfigModo()
@@ -71,6 +87,10 @@ namespace api_migracion_documentos.Infraestructure.Services
                                           "SERVIDOR_MS_HASS", "BD_MS_HASS", "SERVIDOR_SPRING",
                                           "TABLA_ADJUNTOS", "USUARIO_MIGRACION" })
                     sb.AppendLine($"set \"{k}={Get(k)}\"");
+                var fechaMinP = Get("FECHA_MINIMA");
+                sb.AppendLine($"set \"FECHA_MINIMA={(string.IsNullOrWhiteSpace(fechaMinP) ? "2026-01-01" : fechaMinP)}\"");
+                var fechaMaxP = Get("FECHA_MAXIMA");
+                sb.AppendLine($"set \"FECHA_MAXIMA={(string.IsNullOrWhiteSpace(fechaMaxP) ? "TODOS" : fechaMaxP)}\"");
                 sb.AppendLine($"set \"BD_SPRING_PRUEBA={Get("BD_SPRING")}\"");
                 sb.AppendLine($"set \"RUTA_PRUEBA_LOCAL={Get("RUTA_PRUEBA_LOCAL")}\"");
                 sb.AppendLine($"set \"RUTA_RAIZ_PRUEBA={Get("RUTA_RAIZ")}\"");
@@ -85,6 +105,10 @@ namespace api_migracion_documentos.Infraestructure.Services
                 var sb = new StringBuilder("# Configuracion de produccion generada por api\n");
                 sb.AppendLine("MODO_SERVICIO=PRODUCCION");
                 sb.AppendLine($"HABILITAR_PRODUCCION={habilitado}");
+                var fechaMin = Get("FECHA_MINIMA");
+                sb.AppendLine($"FECHA_MINIMA={(string.IsNullOrWhiteSpace(fechaMin) ? "2026-01-01" : fechaMin)}");
+                var fechaMax = Get("FECHA_MAXIMA");
+                sb.AppendLine($"FECHA_MAXIMA={(string.IsNullOrWhiteSpace(fechaMax) ? "TODOS" : fechaMax)}");
                 sb.AppendLine($"SERVIDOR_MS_HASS={Get("SERVIDOR_MS_HASS")}");
                 sb.AppendLine($"BD_MS_HASS={Get("BD_MS_HASS")}");
                 sb.AppendLine($"SERVIDOR_SPRING={Get("SERVIDOR_SPRING")}");
@@ -124,16 +148,24 @@ namespace api_migracion_documentos.Infraestructure.Services
             if (modoPrueba is not ("SIMULACION" or "ESCRITURA")) errs.Add("MODO_PRUEBA debe ser SIMULACION o ESCRITURA");
             foreach (var k in new[] { "BATCH_PRUEBA", "BATCH_AP_DOCUMENTO_PRUEBA" })
                 if (!int.TryParse(cfg.GetValueOrDefault(k), out _)) errs.Add($"{k} debe ser numérico");
+            foreach (var k in new[] { "FECHA_MINIMA", "FECHA_MAXIMA" })
+            {
+                var v = (cfg.GetValueOrDefault(k) ?? "").Trim();
+                if (v.Length == 0 || v.Equals("TODOS", StringComparison.OrdinalIgnoreCase) || v == "*") continue;
+                if (!DateTime.TryParseExact(v, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+                    errs.Add($"{k} debe ser YYYY-MM-DD o TODOS");
+            }
             return errs;
         }
 
         /// <summary>Tail del log (últimas N líneas, últimos 256 KB, latin-1).</summary>
-        public List<string> LogTail(int tail)
+        public List<string> LogTail(int tail, bool produccion = false)
         {
             tail = Math.Clamp(tail, 1, 500);
-            if (!File.Exists(LogPath)) return [];
-            var fi = new FileInfo(LogPath);
-            using var fs = new FileStream(LogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var path = LogPath(produccion);
+            if (!File.Exists(path)) return [];
+            var fi = new FileInfo(path);
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             fs.Seek(Math.Max(0, fi.Length - 256 * 1024), SeekOrigin.Begin);
             using var reader = new StreamReader(fs, Encoding.Latin1);
             var text = reader.ReadToEnd();

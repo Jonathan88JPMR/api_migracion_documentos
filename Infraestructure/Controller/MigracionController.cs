@@ -107,6 +107,10 @@ namespace api_migracion_documentos.Infraestructure.Controller
             return Responder(await _useCase.RunOrdenAsync(numero, tipo));
         }
 
+        [HttpPost("run-rango")]
+        public async Task<IActionResult> RunRango([FromBody] JsonElement body)
+            => Responder(await _useCase.RunRangoAsync(body));
+
         [HttpPost("run-status")]
         public IActionResult RunStatus([FromBody] JsonElement body)
         {

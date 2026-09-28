@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -661,17 +662,20 @@ namespace api_migracion_documentos.Application.UseCaseImpl
 
         // ---------- log ----------
 
-        public Task<ApiResult> LogAsync(int tail)
+        public async Task<ApiResult> LogAsync(int tail)
         {
             try
             {
+                var cfg = await GetActivoCfgAsync();
+                var prod = string.Equals(GetStr(cfg, "MODO_SERVICIO"), "PRODUCCION",
+                    StringComparison.OrdinalIgnoreCase);
                 var body = Ok();
-                body["lines"] = JsonNode.Parse(JsonSerialize(_files.LogTail(tail)));
-                return Task.FromResult(new ApiResult(body));
+                body["lines"] = JsonNode.Parse(JsonSerialize(_files.LogTail(tail, prod)));
+                return new ApiResult(body);
             }
             catch (Exception ex)
             {
-                return Task.FromResult(Fail(ex.Message));
+                return Fail(ex.Message);
             }
         }
 
@@ -680,8 +684,11 @@ namespace api_migracion_documentos.Application.UseCaseImpl
         private ApiResult? ValidarEjecucion(Dictionary<string, object?> cfg)
         {
             var modo = (GetStr(cfg, "MODO_SERVICIO") ?? "").ToUpperInvariant();
-            if (modo != "PRUEBA")
-                return Fail("Solo se puede ejecutar en modo PRUEBA desde la API", 403);
+            if (modo is not ("PRUEBA" or "PRODUCCION"))
+                return Fail("MODO_SERVICIO debe ser PRUEBA o PRODUCCION", 400);
+            if (modo == "PRODUCCION" &&
+                !string.Equals(GetStr(cfg, "ProduccionHabilitado"), "True", StringComparison.OrdinalIgnoreCase))
+                return Fail("Producción no está habilitada en el entorno activo", 403);
             var cfgStr = cfg.ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? "", StringComparer.OrdinalIgnoreCase);
             var errs = _files.ValidarConfig(cfgStr);
             if (errs.Count > 0)
@@ -697,7 +704,8 @@ namespace api_migracion_documentos.Application.UseCaseImpl
         {
             var cfg = await GetActivoCfgAsync();
             if (ValidarEjecucion(cfg) is { } err) return err;
-            var rid = _runs.Start(_files.IniciadorPath, "Ejecución manual");
+            var modo = (GetStr(cfg, "MODO_SERVICIO") ?? "PRUEBA").ToUpperInvariant();
+            var rid = _runs.Start(_files.IniciadorPath, "Ejecución manual", null, modo);
             var body = Ok();
             body["run_id"] = rid;
             body["name"] = "Ejecución manual";
@@ -708,6 +716,7 @@ namespace api_migracion_documentos.Application.UseCaseImpl
         {
             var cfg = await GetActivoCfgAsync();
             if (ValidarEjecucion(cfg) is { } err) return err;
+            var modo = (GetStr(cfg, "MODO_SERVICIO") ?? "PRUEBA").ToUpperInvariant();
             var entorno = GetStr(cfg, "ENTORNO") ?? "PRUEBA";
             try
             {
@@ -725,7 +734,7 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                 var cfgData = await _ms.ConfigAsync(conn, JsonSerialize(new { accion = "G", entorno }));
                 _files.RegenerarArchivos(CfgFromJson(cfgData));
 
-                var rid = _runs.Start(_files.IniciadorPath, "Procesar todo lo faltante");
+                var rid = _runs.Start(_files.IniciadorPath, "Procesar todo lo faltante", null, modo);
                 var body = Ok();
                 body["run_id"] = rid;
                 body["name"] = "Procesar todo lo faltante";
@@ -743,6 +752,7 @@ namespace api_migracion_documentos.Application.UseCaseImpl
         {
             var cfg = await GetActivoCfgAsync();
             if (ValidarEjecucion(cfg) is { } err) return err;
+            var modo = (GetStr(cfg, "MODO_SERVICIO") ?? "PRUEBA").ToUpperInvariant();
 
             numero = (numero ?? "").Trim();
             tipo = string.IsNullOrWhiteSpace(tipo) ? null : tipo.Trim().ToUpperInvariant();
@@ -781,7 +791,7 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                 if (tipo != null) env["SOLO_REFERENCIA_TIPO"] = tipo;
 
                 var rid = _runs.Start(_files.IniciadorPath,
-                    $"Procesar orden {tipo ?? "OC/OS"} {numero}", env);
+                    $"Procesar orden {tipo ?? "OC/OS"} {numero}", env, modo);
                 var body = Ok();
                 body["run_id"] = rid;
                 body["name"] = $"Orden {numero}";
@@ -794,6 +804,86 @@ namespace api_migracion_documentos.Application.UseCaseImpl
             {
                 return Fail(ex.Message);
             }
+        }
+
+        /// <summary>Ejecuta el servicio limitado a un rango de fechas o periodos
+        /// (YYYYMM) sin tocar la config del entorno: pasa SOLO_FECHA_MINIMA /
+        /// SOLO_FECHA_MAXIMA al proceso. Permite PRUEBA y PRODUCCION.</summary>
+        public async Task<ApiResult> RunRangoAsync(JsonElement body)
+        {
+            string? Str(string k) =>
+                body.ValueKind == JsonValueKind.Object && body.TryGetProperty(k, out var v)
+                && v.ValueKind == JsonValueKind.String ? v.GetString()?.Trim() : null;
+
+            DateTime? ParseFecha(string? s)
+            {
+                if (string.IsNullOrWhiteSpace(s) || s.Equals("TODOS", StringComparison.OrdinalIgnoreCase))
+                    return null;
+                return DateTime.TryParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var d) ? d.Date : DateTime.MinValue;
+            }
+            DateTime? ParsePeriodo(string? s, bool finDeMes)
+            {
+                if (string.IsNullOrWhiteSpace(s)) return null;
+                if (!Regex.IsMatch(s, @"^\d{6}$")) return DateTime.MinValue;
+                var primero = new DateTime(int.Parse(s[..4]), int.Parse(s[4..]), 1);
+                return finDeMes ? primero.AddMonths(1).AddDays(-1) : primero;
+            }
+            bool Invalido(DateTime? d) => d == DateTime.MinValue;
+
+            // Periodos (YYYYMM) tienen prioridad sobre fechas sueltas
+            var pDesde = Str("periodo_desde") ?? Str("periodo");
+            var pHasta = Str("periodo_hasta") ?? Str("periodo");
+            DateTime? min, max;
+            if (pDesde != null || pHasta != null)
+            {
+                min = ParsePeriodo(pDesde, false) ?? ParsePeriodo(pHasta, false);
+                max = ParsePeriodo(pHasta, true) ?? ParsePeriodo(pDesde, true);
+            }
+            else
+            {
+                min = ParseFecha(Str("fecha_min"));
+                max = ParseFecha(Str("fecha_max"));
+            }
+            if (Invalido(min) || Invalido(max))
+                return Fail("Fechas deben ser YYYY-MM-DD y periodos YYYYMM", 400);
+            if (min == null && max == null)
+                return Fail("Indique al menos un límite (fecha o periodo)", 400);
+            if (min != null && max != null && min > max)
+                return Fail("La fecha/periodo mínimo no puede ser mayor que el máximo", 400);
+
+            var cfg = await GetActivoCfgAsync();
+            var modo = (GetStr(cfg, "MODO_SERVICIO") ?? "").ToUpperInvariant();
+            if (modo is not ("PRUEBA" or "PRODUCCION"))
+                return Fail("MODO_SERVICIO debe ser PRUEBA o PRODUCCION", 400);
+            if (modo == "PRODUCCION" &&
+                !string.Equals(GetStr(cfg, "ProduccionHabilitado"), "True", StringComparison.OrdinalIgnoreCase))
+                return Fail("Producción no está habilitada en el entorno activo", 403);
+            var cfgStr = cfg.ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? "",
+                StringComparer.OrdinalIgnoreCase);
+            var errs = _files.ValidarConfig(cfgStr);
+            if (errs.Count > 0)
+                return new ApiResult(new JsonObject
+                {
+                    ["ok"] = false,
+                    ["errors"] = new JsonArray(errs.Select(e => JsonValue.Create(e)).ToArray())
+                }, 400);
+
+            var env = new Dictionary<string, string>
+            {
+                ["SOLO_FECHA_MINIMA"] = min?.ToString("yyyy-MM-dd") ?? "TODOS",
+                ["SOLO_FECHA_MAXIMA"] = max?.ToString("yyyy-MM-dd") ?? "TODOS"
+            };
+            var rango = $"{min?.ToString("yyyy-MM-dd") ?? "TODOS"} .. {max?.ToString("yyyy-MM-dd") ?? "TODOS"}";
+            var rid = _runs.Start(_files.IniciadorPath, $"Rango {rango} ({modo})", env, modo);
+
+            var res = Ok();
+            res["run_id"] = rid;
+            res["name"] = $"Rango {rango}";
+            res["modo"] = modo;
+            res["fecha_min"] = min?.ToString("yyyy-MM-dd");
+            res["fecha_max"] = max?.ToString("yyyy-MM-dd");
+            return new ApiResult(res);
         }
 
         public ApiResult RunStatus(string runId)

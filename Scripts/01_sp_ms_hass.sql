@@ -153,11 +153,18 @@ BEGIN
                 EXEC dbo.sp_mig_respuesta 'error', 'Entorno no encontrado', NULL;
                 RETURN;
             END
+            -- FECHA_* se agregan en preparar_paso_produccion.sql; tolerar su
+            -- ausencia para no romper la config si el SP corre antes.
+            DECLARE @fmin VARCHAR(10) = NULL, @fmax VARCHAR(10) = NULL;
+            IF COL_LENGTH('dbo.Entornos_Migracion', 'FECHA_MINIMA') IS NOT NULL
+                SELECT @fmin = FECHA_MINIMA, @fmax = FECHA_MAXIMA
+                FROM dbo.Entornos_Migracion WHERE Entorno = @entorno;
             SET @__data = (
                 SELECT Entorno, Descripcion, MODO_SERVICIO, SERVIDOR_MS_HASS, BD_MS_HASS,
                        SERVIDOR_SPRING, BD_SPRING, RUTA_PRUEBA_LOCAL, RUTA_RAIZ,
                        TIPO_COPIA_PRUEBA, MODO_PRUEBA, BATCH_PRUEBA, BATCH_AP_DOCUMENTO_PRUEBA,
                        TABLA_ADJUNTOS, USUARIO_MIGRACION, SQL_USER,
+                       @fmin AS FECHA_MINIMA, @fmax AS FECHA_MAXIMA,
                        CAST(ISNULL(ProduccionHabilitado, 0) AS BIT) AS ProduccionHabilitado,
                        CAST(ISNULL(Activo, 0) AS BIT) AS Activo
                 FROM dbo.Entornos_Migracion
@@ -191,6 +198,12 @@ BEGIN
                 SQL_USER                 = ISNULL(JSON_VALUE(@json, '$.data.SQL_USER'), SQL_USER),
                 ProduccionHabilitado     = ISNULL(TRY_CAST(JSON_VALUE(@json, '$.data.ProduccionHabilitado') AS BIT), ProduccionHabilitado)
             WHERE Entorno = @entorno;
+
+            IF COL_LENGTH('dbo.Entornos_Migracion', 'FECHA_MINIMA') IS NOT NULL
+                UPDATE dbo.Entornos_Migracion
+                SET FECHA_MINIMA = ISNULL(JSON_VALUE(@json, '$.data.FECHA_MINIMA'), FECHA_MINIMA),
+                    FECHA_MAXIMA = ISNULL(JSON_VALUE(@json, '$.data.FECHA_MAXIMA'), FECHA_MAXIMA)
+                WHERE Entorno = @entorno;
 
             EXEC dbo.sp_mig_respuesta 'success', 'Configuracion actualizada', NULL;
             RETURN;

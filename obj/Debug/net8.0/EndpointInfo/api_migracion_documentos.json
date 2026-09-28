@@ -261,6 +261,31 @@
         }
       }
     },
+    "/api/migracion-documentos/run-rango": {
+      "post": {
+        "tags": [
+          "Migracion"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { }
+            },
+            "text/json": {
+              "schema": { }
+            },
+            "application/*+json": {
+              "schema": { }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/migracion-documentos/run-status": {
       "post": {
         "tags": [

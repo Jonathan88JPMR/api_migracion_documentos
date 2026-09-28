@@ -148,3 +148,17 @@ C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_d
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\buildcheck\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\buildcheck\runtimes\win\lib\net8.0\System.Runtime.Caching.dll
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\publish\web.config
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\web.config
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\appsettings.Production.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\api_migracion_documentos.deps.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\api_migracion_documentos.runtimeconfig.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\api_migracion_documentos.staticwebassets.endpoints.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\appsettings.Development.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\appsettings.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\appsettings.Production.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\publish\api_migracion_documentos.deps.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\publish\api_migracion_documentos.runtimeconfig.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\publish\api_migracion_documentos.staticwebassets.endpoints.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\publish\appsettings.Development.json
+C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Debug\net8.0\publish\publish\publish\appsettings.json

@@ -21,6 +21,7 @@ namespace api_migracion_documentos.Domain.UseCase
         Task<ApiResult> RunAsync();
         Task<ApiResult> RunAllAsync();
         Task<ApiResult> RunOrdenAsync(string numero, string? tipo);
+        Task<ApiResult> RunRangoAsync(JsonElement body);
         ApiResult RunStatus(string runId);
     }
 }

@@ -13,7 +13,8 @@ namespace api_migracion_documentos.Infraestructure.Services
         private readonly ConcurrentDictionary<string, RunInfo> _runs = new();
         private int _counter;
 
-        public string Start(string batPath, string name, IDictionary<string, string>? extraEnv = null)
+        public string Start(string batPath, string name, IDictionary<string, string>? extraEnv = null,
+            string modo = "PRUEBA")
         {
             var rid = $"run-{Interlocked.Increment(ref _counter)}";
             var info = new RunInfo { id = rid, name = name, started = DateTime.Now.ToString("o") };
@@ -23,7 +24,7 @@ namespace api_migracion_documentos.Infraestructure.Services
             {
                 try
                 {
-                    var psi = new ProcessStartInfo("cmd.exe", $"/c \"{batPath}\" PRUEBA")
+                    var psi = new ProcessStartInfo("cmd.exe", $"/c \"{batPath}\" {modo}")
                     {
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
