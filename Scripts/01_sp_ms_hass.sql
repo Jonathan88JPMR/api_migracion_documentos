@@ -551,7 +551,7 @@ BEGIN
             FROM dbo.MS_AP_DocumentoArchivo a
             LEFT JOIN dbo.MS_AP_DocumentoArchivoTraslado t ON t.IdApDocumentoArchivo = a.IdApDocumentoArchivo
             WHERE a.Gadatos IS NOT NULL
-              AND (t.IdApDocumentoArchivo IS NULL OR t.Estado IN ('PENDIENTE', 'ERROR'))
+              AND (t.IdApDocumentoArchivo IS NULL OR t.Estado IN ('PENDIENTE', 'ERROR', 'OMITIDO', 'SIN_AP', 'SIN_CONTENIDO'))
               AND EXISTS (SELECT 1 FROM @obls o
                           WHERE CAST(a.Proveedor AS VARCHAR(20)) = o.p
                             AND RTRIM(a.ObligacionTipoDocumento) = o.t
@@ -562,11 +562,11 @@ BEGIN
             FROM dbo.MS_Archivo a
             LEFT JOIN dbo.MS_ArchivoTraslado t ON t.IdArchivo = a.IdArchivo
             WHERE a.Contenido IS NOT NULL
-              AND (t.IdArchivo IS NULL OR t.Estado IN ('PENDIENTE', 'ERROR'))
+              AND (t.IdArchivo IS NULL OR t.Estado IN ('PENDIENTE', 'ERROR', 'OMITIDO', 'SIN_AP', 'SIN_CONTENIDO'))
               AND (
-                   ((@tipo IS NULL OR @tipo = 'OC') AND a.Tabla = 'WH_OrdenCompra' AND a.Id = @numero)
-                OR ((@tipo IS NULL OR @tipo = 'SO') AND a.Tabla = 'Compromiso' AND a.Id = @numero)
-                OR (a.Tabla = 'Obligaciones' AND a.Id IN (SELECT id_obl FROM @obls))
+                   ((@tipo IS NULL OR @tipo = 'OC') AND RTRIM(a.Tabla) = 'WH_OrdenCompra' AND RTRIM(a.Id) = @numero)
+                OR ((@tipo IS NULL OR @tipo = 'SO') AND RTRIM(a.Tabla) = 'Compromiso' AND RTRIM(a.Id) = @numero)
+                OR (RTRIM(a.Tabla) = 'Obligaciones' AND RTRIM(a.Id) IN (SELECT id_obl FROM @obls))
               ));
 
         SET @__data = (SELECT @ap AS ap, @ms AS ms, @ap + @ms AS total

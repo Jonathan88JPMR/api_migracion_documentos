@@ -123,6 +123,9 @@ BEGIN
             FROM dbo.AP_Documentos d
             WHERE RTRIM(d.ReferenciaNumeroDocumento) = @numero
               AND (@tipo IS NULL OR RTRIM(d.ReferenciaTipoDocumento) = @tipo)
+              AND d.Proveedor IS NOT NULL
+              AND d.ObligacionTipoDocumento IS NOT NULL
+              AND d.ObligacionNumeroDocumento IS NOT NULL
             FOR JSON PATH), '[]');
         EXEC dbo.sp_mig_respuesta 'success', 'Obligaciones de referencia', @__data;
     END TRY

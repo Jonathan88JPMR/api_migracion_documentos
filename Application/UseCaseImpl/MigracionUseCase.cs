@@ -55,6 +55,14 @@ namespace api_migracion_documentos.Application.UseCaseImpl
             => el.ValueKind == JsonValueKind.Object && el.TryGetProperty(prop, out var v) && v.ValueKind != JsonValueKind.Null
                 ? v.ToString() : null;
 
+        /// <summary>String de una propiedad JSON; "" si falta o es null.
+        /// FOR JSON omite claves NULL, asi que GetProperty lanzaria
+        /// KeyNotFoundException con filas de AP_Documentos incompletas.</summary>
+        private static string StrProp(JsonElement el, string prop)
+            => el.ValueKind == JsonValueKind.Object
+               && el.TryGetProperty(prop, out var v) && v.ValueKind == JsonValueKind.String
+                ? v.GetString() ?? "" : "";
+
         private static string? GetStr(Dictionary<string, object?> cfg, string key)
             => cfg.TryGetValue(key, out var v) ? v?.ToString() : null;
 
@@ -309,10 +317,11 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                         var candidatos = Arr(cand)
                             .Select(c => new
                             {
-                                id = c.GetProperty("id").GetInt32(),
-                                p = c.GetProperty("p").GetString() ?? "",
-                                t = c.GetProperty("t").GetString() ?? "",
-                                n = c.GetProperty("n").GetString() ?? ""
+                                id = c.TryGetProperty("id", out var idEl) && idEl.ValueKind == JsonValueKind.Number
+                                    ? idEl.GetInt32() : 0,
+                                p = StrProp(c, "p"),
+                                t = StrProp(c, "t"),
+                                n = StrProp(c, "n")
                             }).ToList();
 
                         var claves = candidatos
@@ -329,7 +338,7 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                             var res = await _spring.ClavesPorRefAsync(connSpring,
                                 JsonSerialize(new { refTipo = referencia, claves = grupo }));
                             foreach (var c in Arr(res))
-                                clavesOk.Add($"{c.GetProperty("p").GetString()}|{c.GetProperty("t").GetString()}|{c.GetProperty("n").GetString()}");
+                                clavesOk.Add($"{StrProp(c, "p")}|{StrProp(c, "t")}|{StrProp(c, "n")}");
                         }
 
                         var ids = candidatos
@@ -568,9 +577,9 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                     var res = await _spring.ReferenciasAsync(connSpring, JsonSerialize(new { claves = grupo }));
                     foreach (var c in Arr(res))
                     {
-                        var key = $"{c.GetProperty("p").GetString()}|{c.GetProperty("t").GetString()}|{c.GetProperty("n").GetString()}";
-                        var refTipo = c.GetProperty("refTipo").GetString();
-                        var refNum = c.GetProperty("refNum").GetString();
+                        var key = $"{StrProp(c, "p")}|{StrProp(c, "t")}|{StrProp(c, "n")}";
+                        var refTipo = StrProp(c, "refTipo");
+                        var refNum = StrProp(c, "refNum");
                         if (!string.IsNullOrEmpty(refTipo) && !string.IsNullOrEmpty(refNum))
                         {
                             if (!refMap.TryGetValue(key, out var set)) refMap[key] = set = new SortedSet<string>();
@@ -771,9 +780,9 @@ namespace api_migracion_documentos.Application.UseCaseImpl
                 var obligaciones = Arr(oblData)
                     .Select(c => new
                     {
-                        p = c.GetProperty("p").GetString() ?? "",
-                        t = c.GetProperty("t").GetString() ?? "",
-                        n = c.GetProperty("n").GetString() ?? ""
+                        p = StrProp(c, "p"),
+                        t = StrProp(c, "t"),
+                        n = StrProp(c, "n")
                     }).ToList();
 
                 var pend = await _ms.PendientesOrdenAsync(connMs,
@@ -784,8 +793,9 @@ namespace api_migracion_documentos.Application.UseCaseImpl
 
                 if (total == 0)
                     return Fail(
-                        $"No hay archivos pendientes para la orden {numero} " +
-                        $"(ya migrados o sin adjuntos nuevos). Obligaciones relacionadas: {obligaciones.Count}", 404);
+                        $"La orden {numero} no tiene archivos pendientes de migrar en este momento. " +
+                        $"Obligaciones relacionadas: {obligaciones.Count}. " +
+                        $"Verifique en la tabla de control si están COMPLETADO, OMITIDO o SIN_AP.", 200);
 
                 var env = new Dictionary<string, string> { ["SOLO_REFERENCIA"] = numero };
                 if (tipo != null) env["SOLO_REFERENCIA_TIPO"] = tipo;

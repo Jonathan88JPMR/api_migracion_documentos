@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("api_migracion_documentos")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+012f0cadfbbd17661719edc8729108bd36396c37")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f6c080728c0d6841f401020b5f8fc2202d1fdeb6")]
 [assembly: System.Reflection.AssemblyProductAttribute("api_migracion_documentos")]
 [assembly: System.Reflection.AssemblyTitleAttribute("api_migracion_documentos")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -98,4 +98,3 @@ C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_d
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\publish\publish\publish\api_migracion_documentos.staticwebassets.endpoints.json
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\publish\publish\publish\appsettings.Development.json
 C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\bin\Release\net8.0\publish\publish\publish\appsettings.json
-C:\Users\jonathan.marquina\Documents\Jonathan Marquina\proyectos\api_migracion_documentos\obj\Release\net8.0\staticwebassets.upToDateCheck.txt
